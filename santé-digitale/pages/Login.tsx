@@ -1,8 +1,10 @@
+
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '../components/Button';
 import { ROUTES } from '../constants';
+import { AlertTriangle } from 'lucide-react';
 
 export const Login = () => {
   const [formData, setFormData] = useState({
@@ -11,7 +13,7 @@ export const Login = () => {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, logout } = useAuth();
   const navigate = useNavigate();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -24,9 +26,23 @@ export const Login = () => {
     setLoading(true);
     try {
       await login(formData);
+      
+      // Maintenance Mode Check
+      const settings = JSON.parse(localStorage.getItem('admin_settings') || '{}');
+      const userRole = localStorage.getItem('user_role');
+      
+      if (settings.maintenanceMode && userRole !== 'admin') {
+           throw new Error("MAINTENANCE_MODE");
+      }
+
       navigate(ROUTES.DASHBOARD);
     } catch (err: any) {
-      setError(err.message || 'Authentication failed. Please check your inputs.');
+      if (err.message === "MAINTENANCE_MODE") {
+          logout(); // Force logout/cleanup
+          setError("System is currently in maintenance mode. Only admins can log in.");
+      } else {
+          setError(err.message || 'Authentication failed. Please check your inputs.');
+      }
     } finally {
       setLoading(false);
     }
@@ -41,7 +57,8 @@ export const Login = () => {
         </div>
 
         {error && (
-          <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm mb-6 border border-red-100">
+          <div className={`p-3 rounded-lg text-sm mb-6 border flex items-center gap-2 ${error.includes('maintenance') ? 'bg-yellow-50 text-yellow-700 border-yellow-200' : 'bg-red-50 text-red-600 border-red-100'}`}>
+            {error.includes('maintenance') && <AlertTriangle size={18} />}
             {error}
           </div>
         )}

@@ -1,15 +1,18 @@
+
 import React, { useEffect, useState } from 'react';
 import { api } from '../services/api';
 import { Patient } from '../types';
 import { Button } from '../components/Button';
-import { UserCircle, Save, MapPin, Phone, Calendar } from 'lucide-react';
+import { UserCircle, Save, MapPin, Phone, Calendar, Mail } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 export const PatientProfile = () => {
+  const { user } = useAuth();
   const [patient, setPatient] = useState<Patient | null>(null);
   const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({
-    date_of_birth: '',
-    phone_number: '',
+    birth_date: '',
+    phone: '',
     address: '',
     emergency_contact: '',
     medical_history: ''
@@ -18,20 +21,18 @@ export const PatientProfile = () => {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const patients = await api.get<Patient[]>('/patients/');
-        if (patients && patients.length > 0) {
-          const p = patients[0];
-          setPatient(p);
-          setFormData({
-            date_of_birth: p.date_of_birth,
-            phone_number: p.phone_number,
-            address: p.address,
-            emergency_contact: p.emergency_contact,
-            medical_history: p.medical_history
-          });
-        }
+        // UPDATED: GET /auth/profile/
+        const p = await api.get<Patient>('/auth/profile/');
+        setPatient(p);
+        setFormData({
+            birth_date: p.birth_date || '',
+            phone: p.phone || '',
+            address: p.address || '',
+            emergency_contact: p.emergency_contact || '',
+            medical_history: p.medical_history || ''
+        });
       } catch (e) {
-        console.error(e);
+        console.error("Profile load error", e);
       } finally {
         setLoading(false);
       }
@@ -42,20 +43,12 @@ export const PatientProfile = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      if (patient) {
-        // Update using PUT as per requirements
-        const updated = await api.put<Patient>(`/patients/${patient.id}/`, formData);
-        setPatient(updated);
-        alert("Profile updated!");
-      } else {
-        // Create
-        const newPatient = await api.post<Patient>('/patients/', formData);
-        setPatient(newPatient);
-        alert("Profile created!");
-      }
+        // UPDATED: PATCH /auth/profile/ to update personal details
+        await api.patch<Patient>('/auth/profile/', formData);
+        alert("Profile updated successfully!");
     } catch (e) {
       console.error(e);
-      alert("Operation failed");
+      alert("Update failed");
     }
   };
 
@@ -69,11 +62,28 @@ export const PatientProfile = () => {
             </div>
             <div>
                 <h2 className="text-2xl font-bold text-slate-900">Patient Profile</h2>
-                <p className="text-slate-500">{patient ? 'Manage your personal information' : 'Complete your profile to get started'}</p>
+                <p className="text-slate-500">Manage your personal information</p>
             </div>
         </div>
 
         <div className="bg-white rounded-xl shadow-sm border border-slate-100 p-8">
+            <div className="mb-6 pb-6 border-b border-slate-100">
+                <h3 className="font-bold text-lg text-slate-800 mb-4">Account Details</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
+                        <span className="block text-slate-400 text-xs mb-1">Username</span>
+                        <span className="font-medium text-slate-900">{user?.username}</span>
+                    </div>
+                    <div className="p-3 bg-slate-50 rounded-lg border border-slate-100">
+                        <span className="block text-slate-400 text-xs mb-1">Email</span>
+                        <div className="flex justify-between items-center">
+                            <span className="font-medium text-slate-900">{user?.email}</span>
+                            <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">Unverified</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
@@ -82,10 +92,9 @@ export const PatientProfile = () => {
                         </label>
                         <input 
                             type="date"
-                            required
                             className="w-full p-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none"
-                            value={formData.date_of_birth}
-                            onChange={e => setFormData({...formData, date_of_birth: e.target.value})}
+                            value={formData.birth_date}
+                            onChange={e => setFormData({...formData, birth_date: e.target.value})}
                         />
                     </div>
                     <div>
@@ -94,11 +103,10 @@ export const PatientProfile = () => {
                         </label>
                         <input 
                             type="tel"
-                            required
                             placeholder="+33..."
                             className="w-full p-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none"
-                            value={formData.phone_number}
-                            onChange={e => setFormData({...formData, phone_number: e.target.value})}
+                            value={formData.phone}
+                            onChange={e => setFormData({...formData, phone: e.target.value})}
                         />
                     </div>
                 </div>
@@ -109,7 +117,6 @@ export const PatientProfile = () => {
                     </label>
                     <input 
                         type="text"
-                        required
                         className="w-full p-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none"
                         value={formData.address}
                         onChange={e => setFormData({...formData, address: e.target.value})}
@@ -119,9 +126,8 @@ export const PatientProfile = () => {
                 <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">Emergency Contact</label>
                     <input 
-                        type="tel"
-                        required
-                        placeholder="+33..."
+                        type="text"
+                        placeholder="Name & Phone"
                         className="w-full p-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-teal-500 outline-none"
                         value={formData.emergency_contact}
                         onChange={e => setFormData({...formData, emergency_contact: e.target.value})}
@@ -142,7 +148,7 @@ export const PatientProfile = () => {
                 <div className="pt-4 border-t border-slate-100 flex justify-end">
                     <Button type="submit" className="w-full md:w-auto">
                         <Save size={18} className="mr-2" />
-                        {patient ? 'Update Profile' : 'Create Profile'}
+                        Save Profile
                     </Button>
                 </div>
             </form>

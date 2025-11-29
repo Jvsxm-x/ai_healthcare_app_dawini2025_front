@@ -23,8 +23,8 @@ export const AuthProvider = ({ children }: { children?: ReactNode }) => {
 
   const fetchProfile = async () => {
     try {
-      // Assuming GET /auth/profile/ returns the User object with the 'role' field
-      const userData = await api.post<User>('/patients/',{});
+      // GET /auth/profile/ returns the User object with the 'role' field
+      const userData = await api.get<User>('/auth/profile/');
       setUser(userData);
       setRole(userData.role);
       localStorage.setItem('user_role', userData.role);
@@ -45,20 +45,21 @@ export const AuthProvider = ({ children }: { children?: ReactNode }) => {
   }, [token]);
 
   const login = async (credentials: any) => {
-    const data = await api.post<AuthResponse>('/token/', credentials);
+    // UPDATED: Use /auth/jwt/create/ per backend spec
+    const data = await api.post<AuthResponse>('/auth/jwt/create/', credentials);
     localStorage.setItem('access_token', data.access);
     localStorage.setItem('refresh_token', data.refresh);
     setToken(data.access);
-    // We need to await the profile fetch here to ensure role is set before redirect
-    // We can't call fetchProfile() directly and await it easily due to closure, 
-    // so we rely on the effect or manually call api.
-    const userData = await api.post<User>('/patients/',{});
+    
+    // Fetch full profile immediately after login to get role and user details
+    const userData = await api.get<User>('/auth/profile/');
     setUser(userData);
     setRole(userData.role);
     localStorage.setItem('user_role', userData.role);
   };
 
   const register = async (registrationData: any) => {
+    // UPDATED: Use /auth/register/ per backend spec
     await api.post('/auth/register/', registrationData);
     await login({ 
       username: registrationData.username, 

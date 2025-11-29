@@ -1,6 +1,7 @@
 
+
 import React from 'react';
-import { NavLink } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { 
   LayoutDashboard, 
@@ -12,12 +13,15 @@ import {
   CalendarDays,
   Settings,
   ShieldCheck,
-  TestTube
+  TestTube,
+  FileCheck,
+  CreditCard
 } from 'lucide-react';
 import { ROUTES } from '../constants';
 
 export const Sidebar = () => {
   const { user, role, logout } = useAuth();
+  const location = useLocation();
 
   // Define branding based on role
   const getTheme = () => {
@@ -37,6 +41,7 @@ export const Sidebar = () => {
         { to: ROUTES.DASHBOARD, label: 'Dashboard', icon: LayoutDashboard },
         { to: ROUTES.MEDICAL_DATA, label: 'Medical Records', icon: ClipboardList },
         { to: ROUTES.ANALYSIS, label: 'AI Analysis', icon: BrainCircuit },
+        { to: ROUTES.DOCUMENTS, label: 'Documents', icon: FileCheck },
         { to: ROUTES.PROFILE, label: 'My Profile', icon: UserCircle },
       ];
     }
@@ -46,7 +51,7 @@ export const Sidebar = () => {
         { to: '/doctor/dashboard', label: 'Doctor Dashboard', icon: LayoutDashboard },
         { to: '/doctor/patients', label: 'Patient List', icon: Users },
         { to: '/doctor/orders', label: 'Lab Orders', icon: TestTube },
-        // Appointments removed or mocked if API not available, but kept link for UI completeness if desired
+        { to: '/doctor/reviews', label: 'Doc Reviews', icon: FileCheck },
         { to: '/doctor/appointments', label: 'Schedule', icon: CalendarDays },
         { to: '/profile', label: 'Settings', icon: Settings },
       ];
@@ -56,6 +61,7 @@ export const Sidebar = () => {
       return [
         { to: '/v1/portal/admin/dashboard', label: 'System Overview', icon: ShieldCheck },
         { to: '/v1/portal/admin/users', label: 'User Management', icon: Users },
+        { to: '/v1/portal/admin/payments', label: 'Payments & Billing', icon: CreditCard },
         { to: '/v1/portal/admin/settings', label: 'Configuration', icon: Settings },
       ];
     }
@@ -64,6 +70,12 @@ export const Sidebar = () => {
   };
 
   const links = getLinks();
+
+  const isActiveLink = (path: string) => {
+    if (path === ROUTES.DASHBOARD && location.pathname === ROUTES.DASHBOARD) return true;
+    if (path !== ROUTES.DASHBOARD && location.pathname.startsWith(path)) return true;
+    return false;
+  };
 
   return (
     <div className="w-64 bg-slate-900 text-white h-screen flex flex-col fixed left-0 top-0 z-20">
@@ -77,22 +89,23 @@ export const Sidebar = () => {
       </div>
 
       <nav className="flex-1 p-4 space-y-2">
-        {links.map((link) => (
-          <NavLink
-            key={link.to}
-            to={link.to}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
-                isActive
+        {links.map((link) => {
+          const active = isActiveLink(link.to);
+          return (
+            <Link
+              key={link.to}
+              to={link.to}
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
+                active
                   ? `bg-white/10 text-white shadow-lg border border-white/5`
                   : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-              }`
-            }
-          >
-            <link.icon size={20} />
-            <span className="font-medium">{link.label}</span>
-          </NavLink>
-        ))}
+              }`}
+            >
+              <link.icon size={20} />
+              <span className="font-medium">{link.label}</span>
+            </Link>
+          );
+        })}
       </nav>
 
       <div className="p-4 border-t border-slate-800">

@@ -1,4 +1,5 @@
 
+
 export type UserRole = 'patient' | 'doctor' | 'admin';
 
 export interface User {
@@ -10,12 +11,14 @@ export interface User {
   role: UserRole;
   is_active?: boolean;
   date_joined?: string;
+  patient_profile?: Patient;
+  is_staff: boolean ;// Linked profile
 }
 
 export interface AuthResponse {
   refresh: string;
   access: string;
-  user?: User; // Optional based on backend implementation
+  user?: User; 
 }
 
 export interface Alert {
@@ -24,16 +27,36 @@ export interface Alert {
   severity: 'low' | 'medium' | 'high';
   is_read: boolean;
   created_at: string;
+  acknowledged?: boolean;
 }
 
 export interface MedicalRecord {
-  id: number;
+  _id?: string; // MongoDB ID
+  id?: string | number; // Fallback
   systolic: number;
   diastolic: number;
   glucose: number;
   heart_rate: number;
-  notes: string;
-  created_at: string;
+  notes?: string;
+  recorded_at: string; // Backend uses recorded_at
+  created_at?: string;
+}
+
+// Backend Response format for Stats
+export interface BackendStatsResponse {
+  summary: {
+    systolic: { avg: number; min: number; max: number };
+    diastolic: { avg: number; min: number; max: number };
+    glucose: { avg: number; min: number; max: number };
+    heart_rate: { avg: number; min: number; max: number };
+  };
+  series: {
+    timestamps: string[];
+    systolic: number[];
+    diastolic: number[];
+    glucose: number[];
+    heart_rate: number[];
+  };
 }
 
 export interface MedicalStats {
@@ -46,21 +69,27 @@ export interface MedicalStats {
 
 export interface Patient {
   id: number;
-  user_id?: number; // Link to user
-  first_name?: string; // Computed from user
-  last_name?: string; // Computed from user
-  date_of_birth: string;
-  phone_number: string;
-  address: string;
-  emergency_contact: string;
-  medical_history: string;
-  created_at?: string;
-  updated_at?: string;
+  user?: number;
+  // Fields used in various components (some might be aliases depending on backend response)
+  first_name?: string; 
+  last_name?: string;
+  birth_date?: string; 
+  date_of_birth?: string;
+  phone?: string;      
+  phone_number?: string;
+  
+  role?: string;
+  address?: string;
+  emergency_contact?: string;
+  medical_history?: string;
+  email_verified?: boolean; // Frontend simulation
+  two_factor_enabled?: boolean; // Admin setting
 }
 
 export interface PredictionResult {
   prediction: number | string;
-  confidence: number;
+  risk: 'Normal' | 'High';
+  confidence?: number;
 }
 
 export interface Appointment {
@@ -78,6 +107,14 @@ export interface MedicalDocument {
   document_type: string;
   uploaded_at: string;
   file?: string;
+  file_size: number; // In bytes
+  doctor_id?: number;
+  doctor_name?: string;
+  patient_name?: string;
+  status: 'pending' | 'approved' | 'rejected';
+  ai_summary?: string;
+  ai_tips?: string;
+  ai_prediction_result?: string; // result from auto-prediction
 }
 
 export interface DoctorDashboardStats {
@@ -95,4 +132,15 @@ export interface LabOrder {
   requested_at: string;
   result_file?: string;
   ai_summary?: string;
+}
+
+export interface SystemSettings {
+  systemName: string;
+  supportEmail: string;
+  maintenanceMode: boolean;
+  allowRegistration: boolean;
+  enforce2FA: boolean;
+  sessionTimeout: number;
+  aiConfidenceThreshold: number;
+  enableBetaFeatures: boolean;
 }

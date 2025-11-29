@@ -1,27 +1,45 @@
-
 import React, { useState, useEffect } from 'react';
-import { TestTube, CheckCircle, Clock, FileText, Sparkles } from 'lucide-react';
+import { TestTube, CheckCircle, Clock, FileText, Sparkles, Loader2 } from 'lucide-react';
 import { LabOrder } from '../../types';
 import { api } from '../../services/api';
 
 export const LabOrders = () => {
   const [orders, setOrders] = useState<LabOrder[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Fetch orders (Mocked for now)
-    const mockOrders: LabOrder[] = [
-        { 
-            id: 1, patient_id: 1, doctor_id: 2, patient_name: 'John Doe', 
-            test_name: 'Complete Blood Count', status: 'completed', requested_at: '2023-10-25T10:00:00',
-            ai_summary: 'Analysis indicates elevated leukocytes. Possible infection.'
-        },
-        { 
-            id: 2, patient_id: 3, doctor_id: 2, patient_name: 'Jane Smith', 
-            test_name: 'MRI Brain', status: 'pending', requested_at: '2023-10-26T09:00:00'
+    const fetchOrders = async () => {
+        try {
+            // First check local storage for shared SaaS state
+            const storedOrders = localStorage.getItem('lab_orders');
+            if (storedOrders) {
+                setOrders(JSON.parse(storedOrders));
+            } else {
+                // Fallback to API/Mock if not found in storage
+                try {
+                    const data = await api.get<LabOrder[]>('/medical/lab_orders/');
+                    setOrders(data);
+                } catch (apiError) {
+                   console.warn("Using default mock");
+                }
+            }
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setLoading(false);
         }
-    ];
-    setOrders(mockOrders);
+    };
+    fetchOrders();
+
+    const handleStorage = () => {
+        const stored = localStorage.getItem('lab_orders');
+        if (stored) setOrders(JSON.parse(stored));
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
   }, []);
+
+  if (loading) return <div className="p-8 flex items-center gap-2 text-slate-500"><Loader2 className="animate-spin" /> Loading orders...</div>;
 
   return (
     <div className="p-8 max-w-7xl mx-auto">
@@ -40,7 +58,7 @@ export const LabOrders = () => {
                           </div>
                           <div>
                               <h3 className="font-bold text-lg text-slate-900">{order.test_name}</h3>
-                              <p className="text-slate-500">Patient: <span className="font-medium text-slate-800">{order.patient_name}</span></p>
+                              <p className="text-slate-500">Patient: <span className="font-medium text-slate-800">{order.patient_name || `ID: ${order.patient_id}`}</span></p>
                               <div className="flex items-center gap-2 text-xs text-slate-400 mt-1">
                                   <Clock size={12} /> Requested: {new Date(order.requested_at).toLocaleDateString()}
                               </div>
@@ -74,6 +92,11 @@ export const LabOrders = () => {
                   </div>
               </div>
           ))}
+          {orders.length === 0 && (
+              <div className="text-center py-10 text-slate-500 border-2 border-dashed border-slate-200 rounded-xl">
+                  No lab orders found.
+              </div>
+          )}
       </div>
     </div>
   );
